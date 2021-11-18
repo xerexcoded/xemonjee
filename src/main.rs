@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 enum Command {
     SetVar(String, Value),
-    Getvar(String),
+    GetVar(String),
     PushVar(String),
     Push(Value),
     Pop,
@@ -14,13 +14,6 @@ enum Value {
     Nothing,
     Int(i64),
     String(String),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-enum Type {
-    Nothing,
-    Int,
-    String,
 }
 
 #[derive(Debug)]
@@ -50,14 +43,14 @@ impl Evaluator {
             None => return Err(EvalandParsingError::EmptyStack),
         }
     }
-    fn add(&self, lhs: value, rhs: value) -> Result<Value, EvalandParsingError> {
+    fn add(&self, lhs: Value, rhs: Value) -> Result<Value, EvalandParsingError> {
         match (lhs, rhs) {
             (Value::Int(i1), Value::Int(i2)) => Ok(Value::Int(i1 + i2)),
             (Value::String(s1), Value::String(s2)) => Ok(Value::String(s1 + &s2)),
             _ => Err(EvalandParsingError::MismatchType),
         }
     }
-    fn evaluate(&mut self, commands: &[Commands]) -> Result<Value, EvalandParsingError> {
+    fn evaluate(&mut self, commands: &[Command]) -> Result<Value, EvalandParsingError> {
         let mut output = Ok(Value::Nothing); //initial state
         for command in commands {
             match command {
@@ -121,7 +114,7 @@ fn parse_set(input: &[&str]) -> Result<Command, EvalandParsingError> {
         // must have exactly 3 parameters , well I am learning still so🦀
         return Err(EvalandParsingError::MismatchNumParams);
     }
-    let var_name = parse_var_name(input[1])?;
+    let var_name = parse_var_name(input[1])?; //indexing from 1 as o is the binary itself
     let value = parse_value(input[2])?;
 
     Ok(Command::SetVar(var_name, value))
@@ -131,7 +124,64 @@ fn parse_get(input: &[&str]) -> Result<Command, EvalandParsingError> {
         return Err(EvalandParsingError::MismatchNumParams);
     }
     let var_name = parse_var_name(input[1])?;
-    Ok(Command::Getvar(var_name))
+    Ok(Command::GetVar(var_name))
+}
+fn parse_pushvar(input: &[&str]) -> Result<Command, EvalandParsingError> {
+    if input.len() != 2 {
+        return Err(EvalandParsingError::MismatchNumParams);
+    }
+    let var_name = parse_var_name(input[1])?;
+    Ok(Command::PushVar(var_name))
 }
 
-fn main() {}
+fn parse_push(input: &[&str]) -> Result<Command, EvalandParsingError> {
+    if input.len() != 2 {
+        return Err(EvalandParsingError::MismatchNumParams);
+    }
+    let val = parse_value(input[1])?;
+    Ok(Command::Push(val))
+}
+
+fn parse(input: &str) -> Result<Vec<Command>, EvalandParsingError> {
+    let mut op = vec![];
+    for line in input.lines() {
+        let command: Vec<_> = line.split_ascii_whitespace().collect(); // collect into vector
+        match command.get(0) {
+            Some(x) if *x == "set" => {
+                op.push(parse_set(&command)?);
+            }
+            Some(x) if *x == "get" => {
+                op.push(parse_get(&command)?);
+            }
+            Some(x) if *x == "push" => {
+                op.push(parse_push(&command)?);
+            }
+            Some(x) if *x == "pushvar" => {
+                op.push(parse_pushvar(&command)?);
+            }
+            Some(x) if *x == "pop" => {
+                op.push(Command::Pop);
+            }
+            Some(x) if *x == "add" => {
+                op.push(Command::Add);
+            }
+            Some(name) => return Err(EvalandParsingError::UnknownCommand(name.to_string())),
+            None => {} // do Nothing
+        }
+    }
+    Ok(op)
+}
+
+// the main show finally🦀
+fn main() -> Result<(), EvalandParsingError> {
+    // returns unit or EvalandPArsingError
+    for args in std::env::args().skip(1) {
+        let contents = std::fs::read_to_string(args).unwrap();
+        let mut interpreter = Evaluator::new();
+        let coms = parse(&contents)?;
+        let ans = interpreter.evaluate(&coms)?;
+
+        println!("{:?}", ans);
+    }
+    Ok(())
+}

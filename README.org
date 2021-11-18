@@ -1,2 +1,5 @@
 #+TITLE: CANTDOMUCH
-+ OK works 🦀
+** XEMONJEE 🦀
+*** WORKS : setting int and string and can add int and concat strings
+[[.s1.png]]
+[[.s2.png]]
