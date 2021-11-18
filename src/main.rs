@@ -95,9 +95,43 @@ fn parse_var_name(var_name: &str) -> Result<String, EvalandParsingError> {
 fn parse_string(val: &str) -> Result<Value, EvalandParsingError> {
     if val.starts_with("\"") && val.ends_with("\"") && val.len() > 1 {
         //>1 as to  avoid parsing quotes singular
-        let inner = val[1..(val.len() - 1)].to_string();
+        let inner = val[1..(val.len() - 1)].to_string(); // starting from 1 as 1st is "\""
         Ok(Value::String(inner))
+    } else {
+        Err(EvalandParsingError::MismatchType)
     }
+}
+
+fn parse_int(val: &str) -> Result<Value, EvalandParsingError> {
+    let result = val.parse::<i64>();
+    match result {
+        Ok(x) => Ok(Value::Int(x)),
+        _ => Err(EvalandParsingError::MismatchType),
+    }
+}
+fn parse_value(val: &str) -> Result<Value, EvalandParsingError> {
+    if val.starts_with("\"") && val.ends_with("\"") && val.len() > 1 {
+        parse_string(val) // parse string
+    } else {
+        parse_int(val) // parse number
+    }
+}
+fn parse_set(input: &[&str]) -> Result<Command, EvalandParsingError> {
+    if input.len() != 3 {
+        // must have exactly 3 parameters , well I am learning still so🦀
+        return Err(EvalandParsingError::MismatchNumParams);
+    }
+    let var_name = parse_var_name(input[1])?;
+    let value = parse_value(input[2])?;
+
+    Ok(Command::SetVar(var_name, value))
+}
+fn parse_get(input: &[&str]) -> Result<Command, EvalandParsingError> {
+    if input.len() != 2 {
+        return Err(EvalandParsingError::MismatchNumParams);
+    }
+    let var_name = parse_var_name(input[1])?;
+    Ok(Command::Getvar(var_name))
 }
 
 fn main() {}
